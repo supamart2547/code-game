@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>เกมใส่รหัสลับ</title>
+<style>
+:root{--bg:#f4f1ea;--card:#fffdf8;--ink:#1f1d1a;--mute:#7a746a;--line:#d9d2c3;--acc:#b8860b;--ok:#2e7d32;--bad:#c62828;--key:#efe9db;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#15130f;--card:#1f1c16;--ink:#f1ece0;--mute:#a39b8a;--line:#3a352a;--acc:#e0b84a;--ok:#66bb6a;--bad:#ef5350;--key:#2a261d}}
+:root[data-theme="dark"]{--bg:#15130f;--card:#1f1c16;--ink:#f1ece0;--mute:#a39b8a;--line:#3a352a;--acc:#e0b84a;--ok:#66bb6a;--bad:#ef5350;--key:#2a261d}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--bg);color:var(--ink);font-family:"Noto Sans Thai","Sarabun",system-ui,sans-serif;padding:16px}
+.card{width:100%;max-width:380px;background:var(--card);border:1px solid var(--line);border-radius:20px;padding:26px 22px;text-align:center}
+h1{margin:0 0 6px;font-size:1.5rem}
+.sub{color:var(--mute);font-size:.95rem;margin:0 0 22px}
+.lock{font-size:2.4rem;margin-bottom:6px}
+.boxes{display:flex;gap:8px;justify-content:center;margin-bottom:10px}
+.box{width:46px;height:58px;border:2px solid var(--line);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.7rem;font-weight:700;background:var(--bg)}
+.box.on{border-color:var(--acc)}
+.shake{animation:sh .4s}
+@keyframes sh{20%,60%{transform:translateX(-8px)}40%,80%{transform:translateX(8px)}}
+.msg{min-height:1.4em;font-size:.95rem;margin:6px 0 14px;color:var(--mute)}
+.msg.bad{color:var(--bad)}.msg.ok{color:var(--ok)}
+.pad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.pad button{font:inherit;font-size:1.4rem;font-weight:600;padding:14px 0;border:1px solid var(--line);border-radius:14px;background:var(--key);color:var(--ink);cursor:pointer}
+.pad button:active{transform:scale(.96)}
+.pad .go{background:var(--acc);color:#fff;border-color:var(--acc)}
+.tries{margin-top:16px;font-size:.85rem;color:var(--mute)}
+.win .lock{font-size:3.2rem}
+.win .big{font-size:1.9rem;letter-spacing:.2em;font-weight:700;color:var(--ok);margin:10px 0}
+.again{margin-top:14px;font:inherit;padding:10px 22px;border-radius:12px;border:1px solid var(--line);background:var(--key);color:var(--ink);cursor:pointer}
+</style>
+</head>
+<body>
+<div class="card" id="app">
+  <div class="lock" id="lock">🔒</div>
+  <h1>ไขรหัสลับ</h1>
+  <p class="sub">ใช้เบาะแสจากโจทย์ในกระดาษ แล้วใส่รหัส 6 หลัก</p>
+  <div class="boxes" id="boxes"></div>
+  <div class="msg" id="msg">กรอกรหัสให้ครบ 6 หลัก</div>
+  <div class="pad" id="pad"></div>
+  <div class="tries" id="tries">ลองมาแล้ว 0 ครั้ง</div>
+</div>
+<script>
+(function(){
+  // รหัสเก็บแบบแปลงค่า ไม่ได้เขียนตรง ๆ
+  var K=[3,5,6,4,8,2].map(function(d,i){return d+i+7;});
+  function ok(s){if(s.length!==6)return false;for(var i=0;i<6;i++){if(+s[i]+i+7!==K[i])return false;}return true;}
+  var val="",tries=0,done=false;
+  var boxes=document.getElementById("boxes"),msg=document.getElementById("msg"),
+      pad=document.getElementById("pad"),triesEl=document.getElementById("tries"),app=document.getElementById("app");
+  for(var i=0;i<6;i++){var b=document.createElement("div");b.className="box";boxes.appendChild(b);}
+  function render(){
+    var bs=boxes.children;
+    for(var i=0;i<6;i++){bs[i].textContent=val[i]||"";bs[i].classList.toggle("on",!done&&i===val.length);}
+  }
+  function setMsg(t,c){msg.textContent=t;msg.className="msg "+(c||"");}
+  function press(k){
+    if(done)return;
+    if(k==="⌫"){val=val.slice(0,-1);setMsg("กรอกรหัสให้ครบ 6 หลัก");}
+    else if(k==="✓"){submit();return;}
+    else if(val.length<6){val+=k;}
+    render();
+    if(val.length===6&&k!=="⌫")setMsg("กด ✓ เพื่อยืนยัน");
+  }
+  function submit(){
+    if(val.length<6){setMsg("ใส่ให้ครบ 6 หลักก่อน","bad");return;}
+    tries++;triesEl.textContent="ลองมาแล้ว "+tries+" ครั้ง";
+    if(ok(val)){win();}
+    else{
+      setMsg("รหัสไม่ถูกต้อง ลองดูโจทย์ในกระดาษอีกครั้ง","bad");
+      boxes.classList.remove("shake");void boxes.offsetWidth;boxes.classList.add("shake");
+      val="";render();
+    }
+  }
+  function win(){
+    done=true;
+    app.className="card win";
+    app.innerHTML='<div class="lock">🔓</div><h1>ไขสำเร็จ!</h1><p class="sub">คุณเปิดรหัสลับได้แล้ว</p><div class="big">3-5-6-4-8-2</div><p class="sub">ใช้ทั้งหมด '+tries+' ครั้ง</p><button class="again" onclick="location.reload()">เล่นอีกครั้ง</button>';
+  }
+  ["1","2","3","4","5","6","7","8","9","⌫","0","✓"].forEach(function(k){
+    var b=document.createElement("button");b.textContent=k;if(k==="✓")b.className="go";
+    b.onclick=function(){press(k);};pad.appendChild(b);
+  });
+  document.addEventListener("keydown",function(e){
+    if(/^[0-9]$/.test(e.key))press(e.key);
+    else if(e.key==="Backspace")press("⌫");
+    else if(e.key==="Enter")press("✓");
+  });
+  render();
+})();
+</script>
+</body>
+</html>
